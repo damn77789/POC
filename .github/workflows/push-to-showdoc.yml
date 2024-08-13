@@ -1,0 +1,39 @@
+name: Push Markdown files to ShowDoc
+
+on:
+  push:
+    branches:
+      - main  # 或者你希望触发的分支
+
+jobs:
+  push-to-showdoc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl jq
+
+      - name: Find and Push Markdown Files
+        run: |
+          # 查找仓库中的所有 Markdown 文件
+          for file in $(find . -name "*.md"); do
+            # 提取文件内容
+            CONTENT=$(cat $file | jq -R -s .)
+            
+            # 提取文件名作为页面标题
+            TITLE=$(basename "$file" .md)
+            
+            # 提取目录路径作为分类名称
+            CATEGORY=$(dirname "$file" | sed 's/^\.\///')
+
+            # 推送到 ShowDoc
+            curl -X POST ${{ secrets.SHOWDOC_API_URL }} \
+              -d "api_key=${{ secrets.SHOWDOC_API_TOKEN }}" \
+              -d "cat_name=$CATEGORY" \
+              -d "page_title=$TITLE" \
+              -d "page_content=$CONTENT" \
+              -d "s_number=99"
+          done
